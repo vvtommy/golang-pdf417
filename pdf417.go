@@ -1,38 +1,46 @@
 package pdf417
 
 import (
-	"math"
-	"strconv"
 	"github.com/boombuler/barcode"
 	"image"
 	"image/color"
+	"math"
+	"strconv"
 )
 
-const MIN_COLUMNS = 1;
-const MAX_COLUMNS = 30;
-const DEFAULT_COLUMNS = 6;
+const MIN_COLUMNS = 1
 
-const MIN_SECURITY_LEVEL = 0;
-const MAX_SECURITY_LEVEL = 8;
-const DEFAULT_SECURITY_LEVEL = 2;
+const MAX_COLUMNS = 30
 
-const MIN_ROWS = 3;
-const MAX_ROWS = 90;
-const MAX_CODE_WORDS = 925;
+const DEFAULT_COLUMNS = 6
 
-const START_CHARACTER = 0x1fea8;
-const STOP_CHARACTER  = 0x3fa29;
+const MIN_SECURITY_LEVEL = 0
 
-const PADDING_CODE_WORD = 900;
+const MAX_SECURITY_LEVEL = 8
+
+const DEFAULT_SECURITY_LEVEL = 2
+
+const MIN_ROWS = 3
+
+const MAX_ROWS = 90
+
+const MAX_CODE_WORDS = 925
+
+const START_CHARACTER = 0x1fea8
+
+const STOP_CHARACTER = 0x3fa29
+
+const PADDING_CODE_WORD = 900
 
 type Barcode struct {
-	Data string
-	CodeWords []int
-	Columns int
-	Rows int
-	Codes [][]int
+	Data          string
+	CodeWords     []int
+	Columns       int
+	Rows          int
+	Codes         [][]int
 	SecurityLevel int
-	pixelGrid [][]bool
+	pixelGrid     [][]bool
+	forceText     bool
 }
 
 func (c *Barcode) Metadata() barcode.Metadata {
@@ -67,20 +75,21 @@ func (c *Barcode) At(x, y int) color.Color {
 	return color.White
 }
 
-func Encode(data string, columns int, securityLevel int) *Barcode {
+func Encode(data string, columns int, securityLevel int, forceText bool) *Barcode {
 	barcode := new(Barcode)
 	barcode.Data = data
 	barcode.Columns = columns
 	barcode.SecurityLevel = securityLevel
+	barcode.forceText = forceText
 
 	codeWords := encodeData(barcode)
 
-	grid := [][]int{};
+	grid := [][]int{}
 
 	for i := 0; i < len(codeWords); i += barcode.Columns {
 		grid = append(
 			grid,
-			codeWords[i:min(i + barcode.Columns, len(codeWords))],
+			codeWords[i:min(i+barcode.Columns, len(codeWords))],
 		)
 	}
 
@@ -133,7 +142,7 @@ func getLeftCodeWord(rowNum int, rows int, columns int, securityLevel int) int {
 		x = columns - 1
 	}
 
-	return 30 * (rowNum / 3) + x
+	return 30*(rowNum/3) + x
 }
 
 func getRightCodeWord(rowNum int, rows int, columns int, securityLevel int) int {
@@ -151,7 +160,7 @@ func getRightCodeWord(rowNum int, rows int, columns int, securityLevel int) int 
 		x += (rows - 1) % 3
 	}
 
-	return 30 * (rowNum / 3) + x
+	return 30*(rowNum/3) + x
 }
 
 func min(a, b int) int {
@@ -163,9 +172,12 @@ func min(a, b int) int {
 
 func encodeData(barcode *Barcode) []int {
 	dataEncoder := CreateDataEncoder()
+	if barcode.forceText {
+		dataEncoder.ForceText = true
+	}
 	dataWords := dataEncoder.Encode(barcode.Data)
 
-	ecCount := int(math.Pow(2, float64(barcode.SecurityLevel + 1)))
+	ecCount := int(math.Pow(2, float64(barcode.SecurityLevel+1)))
 	dataCount := len(dataWords)
 
 	padWords := getPadding(dataCount, ecCount, barcode.Columns)

@@ -8,12 +8,13 @@ type Encoder interface {
 }
 
 type DataEncoder struct {
-	Encoders []Encoder
+	Encoders       []Encoder
 	DefaultEncoder Encoder
+	ForceText      bool
 }
 
 type Chain struct {
-	Data string
+	Data    string
 	Encoder Encoder
 }
 
@@ -24,6 +25,7 @@ func CreateDataEncoder() DataEncoder {
 	encoder := DataEncoder{
 		[]Encoder{numberEncoder, textEncoder},
 		textEncoder,
+		false,
 	}
 
 	return encoder
@@ -35,7 +37,6 @@ func (dataEncoder DataEncoder) Encode(data string) []int {
 	if len(chains) == 0 {
 		panic("hmmm")
 	}
-
 
 	firstEncoder := chains[0].Encoder
 	addSwitchCode := firstEncoder.GetName() != dataEncoder.DefaultEncoder.GetName()
@@ -57,6 +58,12 @@ func (dataEncoder DataEncoder) Encode(data string) []int {
 }
 
 func (dataEncoder DataEncoder) SplitToChains(data string) []Chain {
+	if dataEncoder.ForceText {
+		return []Chain{
+			{data, dataEncoder.DefaultEncoder},
+		}
+	}
+
 	chains := []Chain{}
 	chainData := ""
 	encoder := dataEncoder.DefaultEncoder
